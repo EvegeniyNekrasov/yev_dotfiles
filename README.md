@@ -1,2 +1,2 @@
-# yev_dotfiles
-My personal dotfiles configuration
+# My personal dotfiles configuration
+#### [TODO]: Add config explication
