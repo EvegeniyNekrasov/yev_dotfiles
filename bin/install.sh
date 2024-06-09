@@ -1,18 +1,56 @@
 #!/bin/bash
 
-# Installing rust
-install_rust() {
-    echo "Installing Rust..."
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-    if [ $? -eq 0 ]; then
-        echo "Rust installed successfully."
+install_brew() {
+    echo "[INFO LOG] Checking if Homebrew is installed..."
+
+    if command -v brew &> /dev/null; then
+        echo "[INFO LOG] Homebrew is already installed."
     else
-        echo "Rust installation failed." >&2
-        exit 1
+        echo "[INFO LOG] Homebrew not found. Installing Homebrew..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        if [ $? -eq 0 ]; then
+            echo "[INFO LOG] Homebrew installed successfully."
+        else
+            echo "[ERROR LOG] Homebrew installation failed." >&2
+            exit 1
+        fi
     fi
 }
 
-# Setting up Zsh
+install_eza() {
+    echo "[INFO LOG] Checking if eza is installed..."
+
+    if command -v eza &> /dev/null; then
+        echo "[INFO LOG] eza is already installed."
+    else
+        echo "[INFO LOG] eza not found. Installing eza..."
+        brew install eza
+        if [ $? -eq 0 ]; then
+            echo "[INFO LOG] eza installed successfully."
+        else
+            echo "[ERROR LOG] eza installation failed." >&2
+            exit 1
+        fi
+    fi
+}
+
+install_rust() {
+    echo "[INFO LOG] Checking if Rust is installed..."
+
+    if command -v rustc &> /dev/null; then
+        echo "[INFO LOG] Rust is already installed."
+    else
+        echo "[INFO LOG] Rust not found. Installing Rust..."
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        if [ $? -eq 0 ]; then
+            echo "[INFO LOG] Rust installed successfully."
+        else
+            echo "[ERROR LOG] Rust installation failed." >&2
+            exit 1
+        fi
+    fi
+}
+
 setup_zsh() {
     echo "Setting up Zsh..."
 
@@ -24,20 +62,19 @@ setup_zsh() {
         echo "zsh-completions already exists."
     fi
 
-    if [ ! -d "$ZSH_DIR/zsh-autosuggestions" ]; then
-        git clone https://github.com/zsh-users/zsh-autosuggestions $ZSH_DIR/zsh-autosuggestions
+    if [ ! -d "$ZSH_DIR/zsh-syntax-highlighting" ]; then
+        git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_DIR/zsh-syntax-highlighting
     else
-        echo "zsh-autosuggestions already exists."
+        echo "zsh-syntax-highlighting already exists."
     fi
 
-    if [ ! -d "$ZSH_DIR/zsh-syntax-highlighting" ]; then
-        git clone https://github.com/zsh-users/zsh-syntax-highlighting $ZSH_DIR/zsh-syntax-highlighting
+    if [ ! -d "$ZSH_DIR/zsh-syntax-autosuggestions" ]; then
+        git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH_DIR/zsh-autosuggestions
     else
         echo "zsh-syntax-highlighting already exists."
     fi
 }
 
-# Adding symbolic links
 add_symbolic_links() {
     echo "Creating necessary directories..."
     mkdir -p ~/.config/wezterm
@@ -61,14 +98,23 @@ add_symbolic_links() {
         echo "starship.toml file not found."
     fi
 
-    if [ -f "$(pwd)/zshrc/zshrc" ]; then
-        cp -i "$(pwd)/zshrc/zshrc" ~/.zshrc
+    ZSHRC_SOURCE="$(pwd)/zshrc/.zshrc"
+
+    if [ -f "$ZSHRC_SOURCE" ]; then
+        # Backup existing ~/.zshrc if it exists
+        if [ -f "$HOME/.zshrc" ]; then
+            cp "$HOME/.zshrc" "$HOME/.zshrc.backup.$(date +%Y%m%d%H%M%S)"
+        fi
+        
+        # Copy the new zshrc file to the home directory
+        cp "$ZSHRC_SOURCE" "$HOME/.zshrc"
+        
+        echo ".zshrc has been replaced with the new one."
     else
         echo "zshrc file not found."
     fi
 }
 
-# Setting up GIT config
 setup_git_config() {
     read -p "Your name for GIT commits: " git_name
     if [[ -z "$git_name" ]]; then
@@ -93,8 +139,9 @@ setup_git_config() {
 }
 
 # Main script execution
+install_brew
 install_rust
+install_eza
 setup_zsh
 add_symbolic_links
 setup_git_config
-
